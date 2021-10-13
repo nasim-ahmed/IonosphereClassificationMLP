@@ -1,4 +1,5 @@
 from os import initgroups
+from typing import AsyncIterable
 from numpy import vstack
 from pandas import read_csv
 from sklearn.preprocessing import LabelEncoder
@@ -47,13 +48,13 @@ class MLP(Module):
     def __init__(self, n_inputs):
         super(MLP, self).__init__()
         self.hidden1 = Linear(n_inputs,10)
-        kaiming_uniform_(self.hidden1.weights, nonlinearity='relu')
+        kaiming_uniform_(self.hidden1.weight, nonlinearity='relu')
         self.act1 = ReLU()
         self.hidden2 = Linear(10,8)
-        kaiming_uniform_(self.hidden2.weights, nonlinearity='relu')
+        kaiming_uniform_(self.hidden2.weight, nonlinearity='relu')
         self.act2 = ReLU()
         self.hidden3 = Linear(8,1)
-        xavier_uniform_(self.hidden3.weights)
+        xavier_uniform_(self.hidden3.weight)
         self.act3 = Sigmoid()
 
     def forward(self, X):
@@ -78,9 +79,9 @@ def prepare_data(path):
 
 def train_model(train_dl, model):
     criterion = BCELoss()
-    optimizer = SGD(model.parameters,lr=0.01, momentum=0.09)
+    optimizer = SGD(model.parameters(),lr=0.01, momentum=0.09)
     for epoch in range(100):
-        for i, (inputs, target) in train_dl:
+        for i, (inputs, target) in enumerate(train_dl):
             #clear the gradients 
             optimizer.zero_grad()
             #compute the model output
@@ -89,18 +90,37 @@ def train_model(train_dl, model):
             loss = criterion(yhat, target)
             #backpropagation
             loss.backward()
-
+            #update model weights 
             optimizer.step()
 
- 
+def evaluate_model(test_dl, model):
+    predictions, actuals = list(), list()
+    for i,(inputs, target) in enumerate(test_dl):
+        yhat = model(inputs)
+        
+        yhat = yhat.detach().numpy()
 
+        actual = target.numpy()
+        actual = actual.reshape(len(actual), 1)
+
+        yhat = yhat.round()
+
+        predictions.append(yhat)
+        actuals.append(actual)
+    predictions, actuals = vstack(predictions), vstack(actuals)
+    acc = accuracy_score(actuals, predictions)
+    return acc
+        
 
 
 
 train_dl, test_dl = prepare_data('ionosphere.csv')
 print(type(train_dl))
 print('The length of the train data: {0}, test data:{1}'.format(len(train_dl.dataset), len(test_dl.dataset)))
-
+model = MLP(34)
+train_model(train_dl, model)
+acc = evaluate_model(test_dl, model)
+print('Accuracy: %.3f'%acc)
 
 
 
