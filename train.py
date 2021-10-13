@@ -67,7 +67,6 @@ class MLP(Module):
 
 
 
-
 #prepare the dataset
 def prepare_data(path):
     dataset = CSVDataset(path)
@@ -75,6 +74,26 @@ def prepare_data(path):
     train_dl = DataLoader(train, batch_size=32, shuffle=True)
     test_dl = DataLoader(test, batch_size=1024, shuffle=False)
     return train_dl, test_dl
+
+
+def train_model(train_dl, model):
+    criterion = BCELoss()
+    optimizer = SGD(model.parameters,lr=0.01, momentum=0.09)
+    for epoch in range(100):
+        for i, (inputs, target) in train_dl:
+            #clear the gradients 
+            optimizer.zero_grad()
+            #compute the model output
+            yhat = model(inputs)
+            #calculate loss
+            loss = criterion(yhat, target)
+            #backpropagation
+            loss.backward()
+
+            optimizer.step()
+
+ 
+
 
 
 
